@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>body {
+    background: #222222;
+    color: #545454;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 auto;
+    max-width: 800px;
+    padding: 2em 2em 4em;
+}
+
+p {
+    width: 100%;
+    height: 8px;
+}
+
+h3 {
+    opacity: 0.3;
+}
+
+#canvas {
+   width: 100%;
+   text-align:center;
+}
+
+canvas {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -9999;
+}           </style>
+        
+        
+                <script>
+            
+           function main(){
+    var canvas = document.getElementById("canvas")
+    var context = canvas.getContext("2d");
+    context.canvas.width = window.innerWidth;
+    context.canvas.height = window.innerHeight;
+    var w = canvas.width;
+    var h = canvas.height;
+    var m = Math.min(w,h);
+    context.font = m/20+"px Comic Sans MS";
+    var slider = document.getElementById("centerGrav");
+    var slider2 = document.getElementById("air");
+    var slider3 = document.getElementById("sub");
+    var initTime = Date.now();
+    var imgdata = context.getImageData(0,0, w, h);
+    var tau = Math.PI*2;
+    var loopCount = 0;
+    var numdestroyed = 0;
+    
+    var pos = []; //position of the particles 
+    var velocity = []; //defines the direction in witch the particle moves and its speed
+    var destroyed = []; 
+    var color = [];
+    var mass = [];
+    
+    //variables you can play with
+    var numBodies = 2000;//the number of particles
+    var width = Math.sqrt(numBodies);//width of the particle group (distance between particles remains the same)
+    var size = 3; //distance between the particles
+    var reset = true;//reset when none of the particles remain
+    var step = 60; //max frames per second (locked to 30 on mobile for some reason)
+    var blhole = [w/2,h/2];//position of the black hole
+    //var substep = 1;
+    
+    init(true);// initialize
+
+    setInterval(update,1000/step);
+
+function update(){
+    var substep = slider3.value;
+    
+    for (i=0;i<substep;i++){
+        physics(i==substep-1);
+    }
+    context.putImageData(imgdata,0,0);
+    clear();
+    
+    
+    context.fillStyle = "#000000";
+    context.beginPath();
+    context.arc(blhole[0],blhole[1], 10, 0, 2 * Math.PI);//draws the black hole
+    context.closePath();
+    context.fill();
+    context.fillStyle = "#FFFFFF";
+    context.fillText("particles remaining: "+(numBodies-numdestroyed),0,m/20);
+    
+    if (numdestroyed>=numBodies) init(false); //reset if all of the bodies are destroyed
+    loopCount += 1;
+}
+
+function clear(){
+    for (i=0;i<numBodies;i++){
+        particle(pos[i],[0,0,0,0]);
+    }
+}
+
+
+function init(first){
+    var rpx = 0;
+    var rpy = 0;
+    var vx = 0;
+    var vy = 0;
+    var vel = 3;
+    if (!first){
+        rpx = w/4+Math.random()*(w/2);
+        rpy = h/4+Math.random()*(h/2);
+    }else{
+        rpx = w/2;
+        rpy = 0;
+    }
+    
+    var P = normalize([blhole[0] - rpx, blhole[1] - rpy]);
+    vx = P[1]*(-vel);
+    vy = P[0]*vel;
+    
+    for (var i = 0;i<numBodies;i++){
+        
+        velocity[i] = [vx+Math.random()*0.2+0.5,vy+Math.random()*0.2+0.5];//set start velocity
+        
+        var px = (rpx+((i%width)*size));
+        var py = (rpy+(Math.floor(i/width)*size));
+        
+        pos[i] = [Math.floor(px+Math.random()*size-size/2),Math.floor(py+Math.random()*size-size/2)];//set start position
+        
+        color[i] = makeColGrad(tau/numBodies, i);//sets color
+        destroyed[i] = false;
+        numdestroyed = 0;
+        mass[i] = Math.random()*0.2+0.5;
+    }
+}
+
+function physics(draw){
+    var valu1 = slider.value;
+    var valu2 = slider2.value;
+    for (var i = 0;i<numBodies;i++){
+        if (!destroyed[i]){
+            
+            var p = [pos[i][0]-blhole[0],pos[i][1]-blhole[1]];
+            
+            var d = (p[0]*p[0]+p[1]*p[1])/500;//(the distance between the particle and the black hole)^2/500
+            var np = normalize(p);//slowest part here, it normalizes the position of the particle.
+            
+            velocity[i][0] -= (np[0]*valu1)/d; //gravity
+            velocity[i][1] -= (np[1]*valu1)/d;
+            
+            velocity[i][0] *= 1-valu2/100; //air resistance
+            velocity[i][1] *= 1-valu2/100;
+            
+            pos[i][0] += velocity[i][0]*mass[i];//adds the velocity to the position of the particle every simulation step
+            pos[i][1] += velocity[i][1]*mass[i];
+            
+            if (draw) particle(pos[i],color[i]); //draws the patricle
+            destroyed[i] = d<0.3||d>m; //destroy particle when its distance to the black hole is less than 0.3
+            numdestroyed += destroyed[i];//count the destroyed particles
+        }
+    }
+}
+
+function makeColGrad(freq, i){
+        var center = 128;
+        var width = 127;
+                        
+        var red = Math.sin((freq*i + tau/3*1)) * width + center;
+        var grn = Math.sin((freq*i + tau/3*2)) * width + center;
+        var blu = Math.sin((freq*i + tau/3*3)) * width + center;
+        return [red,grn,blu,255];
+    }
+    
+function RGB2Color(r,g,b){
+    return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+}
+
+//nomalizes a vector
+function normalize(vec) {
+    var x = vec[0];
+    var y = vec[1];
+    var len = Math.sqrt(x*x+y*y);
+    return [x/len,y/len];
+} 
+
+//returns the negative vector
+function neg(vec){
+    return [-vec[0],-vec[1]];
+} 
+
+function clamp(num, min, max) {
+  return num <= min ? min : num >= max ? max : num;
+}
+
+function pixel(pos,color){
+    var i = w*Math.floor(clamp(pos[1],0,h))+Math.floor(clamp(pos[0],0,w));
+    imgdata.data[4*i] = color[0];
+    imgdata.data[4*i+1] = color[1];
+    imgdata.data[4*i+2] = color[2];
+    imgdata.data[4*i+3] = color[3];
+}
+function particle(pos,color){
+    pixel([pos[0],pos[1]],color);
+    pixel([pos[0]-1,pos[1]],color);
+    pixel([pos[0],pos[1]-1],color);
+    pixel([pos[0]+1,pos[1]],color);
+    pixel([pos[0],pos[1]+1],color);
+    //pixel([pos[0]-1,pos[1]-1],color);
+    //pixel([pos[0]+1,pos[1]-1],color);
+    //pixel([pos[0]+1,pos[1]+1],color);
+    //pixel([pos[0]-1,pos[1]+1],color);
+}
+}
+            
+        </script>        
+        
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+        <div>
+            <p>gravity</p>
+            <input type="range" min="0" max="8" value="4" step="0.01" class="sliderA" id="centerGrav">
+            <p>air resistance</p>
+            <input type="range" min="0" max="1" value="0.01" step="0.01" class="sliderA" id="air">
+            <p>substeps</p>
+            <input type="range" min="1" max="16" value="1" step="1" class="sliderA" id="sub">
+        </div>
+        <script>
+            main();
+        </script>
+
+        
+        
+        
+    </body>
+</html>
