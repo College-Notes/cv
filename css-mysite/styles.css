@@ -5,6 +5,11 @@ body {
     font-family: 'Merriweather', serif;
 
 }
+  .invisible {
+  visibility: hidden;
+  }
+
+
 
 h1 {
     color: #66BFBF;
