@@ -25,6 +25,8 @@ body {
   margin: 0;
   text-align: center;
   font-family: 'Merriweather', serif;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='100px' width='100px'><text transform='translate(20, 100) rotate(-45)' fill='rgb(212, 207, 207)' font-size='20'>College-Notes</text></svg>");
+
 }
 @media only screen and (max-width: 1000px) {
   body {
